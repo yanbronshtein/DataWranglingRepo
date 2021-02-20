@@ -14,12 +14,11 @@
 
 library(tidyverse)
 library(gapminder)
+library(countrycode)
 sort_res_by_abs <- function(obj, n = 5) {
   if (!("lm" %in% class(obj))) stop ("obj must have class 'lm'")
   num_res <- length(obj$residuals)
   res <- as_tibble(obj$residuals)
-  print("Num res")
-  print(num_res)
   if (n > num_res) {
     stop (paste("the n value", n, "is larger than the number of residuals", 
                 num_res, sep = " "))
@@ -42,7 +41,77 @@ sort_res_by_abs(mtcars.lm, 20)
 #height for men and women. Finally, make a plot showing the distributions of 
 #height for men and for women on the same plot.
 height_t <- as_tibble(read_tsv("C:\\Users\\Julia\\Downloads\\height.txt"))
-height_t
+heights <- height_t %>% pull(height)
+
+int_match_inches_count <- 0
+float_match_inches_count <- 0
+int_match_feet_count <- 0
+float_match_feet_count <- 0
+feet_ticks_match_count <- 0
+feet_words_count <- 0
+feet_words_count_decimal <- 0
+
+not_match_count <- 0
+centimeters_count <- 0
+for (row in heights) {
+  row <- trimws(row)
+  #In inches whole number
+  if (str_detect(row, "^[1-9][0-9]{1,2}$")) {
+    
+    #cat("Match found integer", row, "\n")
+    int_match_inches_count <- int_match_inches_count + 1
+  #In inches floating point number
+  }else if (str_detect(row, "^[1-9][0-9]{1,2}\\.[0-9]{1,9}$")) {
+    #cat("Match found float", row,"\n")
+    float_match_inches_count <- float_match_inches_count + 1
+    
+  } else if (str_detect(row, "^[1-9]$")) {
+    #cat("Match found feet int", row,"\n")
+    int_match_feet_count <- int_match_feet_count + 1
+    
+  }
+  #else if (str_detect(row, "^[1-9]\\.[0-9]{1,5}$")) {
+  else if (str_detect(row, "^[1-9]{1}[\\.][0-9]{1,5}$")) {
+    #cat("Match found feet float", row,"\n")
+    float_match_feet_count <- float_match_feet_count + 1
+    
+  }
+  #Height between 5'0.0"-5'11.9"
+  #else if (str_detect(row, "^[1-9]{1}'\\s*[0-9]{1,2}(\" $")) {
+  else if (str_detect(row, "^([1-9]{1}'\\s*)?[0-9]{1,2}(\"|'')$")) {
+    #cat("Match found between 5'0\" and 5'11\"", row,"\n")
+    feet_ticks_match_count <- feet_ticks_match_count + 1
+  
+  #}else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|foot)\\s*[0-9]{1,2}\\s*(in | inches)$")) {
+  }else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|feet and|foot)\\s*[0-9]{1,2}\\s*\\.?[0-9]?\\s*(in|inches)")) {
+  
+  #cat("Match found feet and inches", row,"\n")
+    
+    feet_words_count <- feet_words_count + 1
+    
+  
+  }else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|foot)\\s*[0-9]{1,2}\\.[0-9]{1,9}\\s*(in | inches)$")) {
+    cat("Match found feet and inches with decimal", row,"\n")
+    feet_words_count_decimal <- feet_words_count_decimal + 1
+  }
+
+  else if (str_detect(row, "^[1-9][0-9]{2,3}\\s*(cm|centimeter|centimeters)$")) {
+    #cat("Match found centimeters", row, "\n")
+    centimeters_count <- centimeters_count + 1
+    
+  }
+    
+  else {
+    cat("Match not found", row, "\n")
+    not_match_count <- not_match_count + 1
+  }
+  
+}
+cat("match count", match_count)
+cat("not match count", not_match_count)
+
+
+
 
 
 ## Split the gapminder data by country and use map() to calculate, by country,
@@ -53,6 +122,20 @@ height_t
 gapminder_t <- as_tibble(gapminder)
 models_rsquared <- gapminder_t %>% split(.$country) %>%
   map(~ lm(lifeExp ~ log10(gdpPercap), weights = pop, data = .)) %>%
-  map(summary) %>% map_dbl(~.$r.squared)
+  map(summary) %>% 
+  map_dbl(~.$r.squared) %>% 
+  as_tibble
+
+continents <- countrycode(sourcevar = gapminder_t %>% 
+                                          pull(country) %>% unique(), 
+                                         origin = "country.name", 
+                                         destination = "continent")
+
+
+  mutate(countries = gapminder_t %>% select(country) %>% unique()) %>%
+  mutate(r_squared = models_rsquared)
+  
+
+
 
 
