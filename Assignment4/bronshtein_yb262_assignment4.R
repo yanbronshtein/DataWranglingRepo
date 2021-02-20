@@ -15,6 +15,7 @@
 library(tidyverse)
 library(gapminder)
 library(countrycode)
+library(measurements)
 sort_res_by_abs <- function(obj, n = 5) {
   if (!("lm" %in% class(obj))) stop ("obj must have class 'lm'")
   num_res <- length(obj$residuals)
@@ -43,19 +44,20 @@ sort_res_by_abs(mtcars.lm, 20)
 height_t <- as_tibble(read_tsv("C:\\Users\\Julia\\Downloads\\height.txt"))
 heights_vec <- height_t %>% pull(height)
 head(heights_vec)
-# Variable initialization
 
 
 
 convert_ft_2_inches <- function(feet, inches) {
-  if (feet < 0 | feet >= 12 | inches < 0 | inches >= 12) {
-    return(NA)
-  }
-  else {
-    return(12 * feet + inches)
-  }
+  #if(feet < 0 || feet >= 12)
+  #if (feet < 0 || feet >= 12 || inches < 0 || inches >= 12) {
+  #  return(-1)
+  #}
+  #else {
+  return(12 * feet + inches)
+  #}
 }
 clean_height_data = function(heights_vec) {
+  # Variable initialization
   int_match_inches_count <- 0
   float_match_inches_count <- 0
   int_match_feet_count <- 0
@@ -63,10 +65,10 @@ clean_height_data = function(heights_vec) {
   feet_ticks_match_count <- 0
   feet_words_count <- 0
   feet_words_count_decimal <- 0
-
   not_match_count <- 0
   centimeters_count <- 0
-
+  # Create a numeric vector to store cleaned up height data
+  cleaned_heights_vec <- numeric(0) 
   for (row in heights_vec) {
     row <- trimws(row)
     
@@ -74,18 +76,21 @@ clean_height_data = function(heights_vec) {
     if (str_detect(row, "^[1-9][0-9]{1,2}$")) {
       
       #cat("Match found integer", row, "\n")
+      cleaned_heights_vec <- c(cleaned_heights_vec, as.numeric(row))
       int_match_inches_count <- int_match_inches_count + 1
+    }
     # In inches floating point number (2)
-    }else if (str_detect(row, "^[1-9][0-9]{1,2}\\.[0-9]{1,9}$")) {
+    else if (str_detect(row, "^[1-9][0-9]{1,2}\\.[0-9]{1,9}$")) {
       #cat("Match found float", row,"\n")
       float_match_inches_count <- float_match_inches_count + 1
+      cleaned_heights_vec <- c(cleaned_heights_vec, as.numeric(row))
       
     }
     # In feet whole number (3)
     else if (str_detect(row, "^[1-9]$")) {
       #cat("Match found feet int", row,"\n")
       feet <- as.numeric(str_extract(row, "^[1-9]$"))
-      convert_ft_2_inches(feet, 0)
+      cleaned_heights_vec <- c(cleaned_heights_vec, convert_ft_2_inches(feet, 0))
       int_match_feet_count <- int_match_feet_count + 1
       
     }
@@ -93,23 +98,26 @@ clean_height_data = function(heights_vec) {
     # In feet floating point number(4)
     else if (str_detect(row, "^[1-9]{1}[\\.][0-9]{1,5}$")) {
       #cat("Match found feet float", row,"\n")
+      feet <- as.numeric(str_extract(row, "^[1-9]$"))
+      cleaned_heights_vec <- c(cleaned_heights_vec, convert_ft_2_inches(feet, 0))
       float_match_feet_count <- float_match_feet_count + 1
       
     }
     #In feet and inches with ticks(5)
-    #else if (str_detect(row, "^[1-9]{1}'\\s*[0-9]{1,2}(\" $")) { 
     else if (str_detect(row, "^[1-9]{1}'\\s*[0-9]{1,2}(\\.[0-9]{1,9})?(\"|'')$")) {
       #cat("Match found between 5'0\" and 5'11\"", row,"\n")
+      feet_inches <- as.numeric(as.vector(str_extract_all(row,"[0-9.]+", simplify = TRUE)))
+      cleaned_heights_vec <- c(cleaned_heights_vec,
+                               convert_ft_2_inches(feet_inches[1], feet_inches[2]))
+      
       feet_ticks_match_count <- feet_ticks_match_count + 1
     }
-    #}
     # In feet and inches with words(6)
     else if (str_detect(row, "^[1-9]{1}\\s*(ft | feet | foot)\\s*[0-9]{1,2}\\s*(in | inches)")) {
-    #}else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|feet and|foot)\\s*[0-9]{1,2}\\s*\\.?[0-9]?\\s*(in|inches)")) {
-    
     #cat("Match found feet and inches", row,"\n")
       feet_inches <- as.numeric(as.vector(str_extract_all(row,"[0-9.]+", simplify = TRUE)))
-      convert_ft_2_inches(feet_inches[1], feet_inches[2])
+      cleaned_heights_vec <- c(cleaned_heights_vec,
+                               convert_ft_2_inches(feet_inches[1], feet_inches[2]))
       feet_words_count <- feet_words_count + 1
       
     
@@ -118,8 +126,8 @@ clean_height_data = function(heights_vec) {
     else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|foot)\\s*[0-9]{1,2}\\.[0-9]{1,9}\\s*(in | inches)$")) {
       #cat("Match found feet and inches with decimal", row,"\n")
       feet_inches <- as.numeric(as.vector(str_extract_all(row,"[0-9.]+", simplify = TRUE)))
-      #cat(convert_ft_2_inches(feet_inches[1], feet_inches[2]))
-      feet_words_count <- feet_words_count + 1
+      cleaned_heights_vec <- c(cleaned_heights_vec,
+                               convert_ft_2_inches(feet_inches[1], feet_inches[2]))
       
       feet_words_count_decimal <- feet_words_count_decimal + 1
     }
@@ -128,24 +136,23 @@ clean_height_data = function(heights_vec) {
       #cat("Match found centimeters", row, "\n")
       centimeters_count <- centimeters_count + 1
       
+      cm_val <- as.numeric(str_extract(row, "[0-9.]+")) / 2.54
+      cleaned_heights_vec <- c(cleaned_heights_vec, cm_val)
     }
       
     else {
       cat("Match not found", row, "\n")
+      cleaned_heights_vec <- c(cleaned_heights_vec, NA)
       not_match_count <- not_match_count + 1
     }
-    
   }
+  return(cleaned_heights_vec)
 }
 
 
-clean_height_data(heights_vec)
-convert_feet_2_inches <- function(height_ft) {
-  if (in_feet) {
-    return(as.numeric(str_extract(height_ft, pattern)) * 12)
-  }
-}
-extract_height("5",)
+out <- clean_height_data(heights_vec)
+
+height_t <- height_t %>% mutate(heights_cleaned=out)
 
 ## Split the gapminder data by country and use map() to calculate, by country,
 #the R-squared for the linear model lifeExp ~ log10(gdpPercap). Using ggplot2,
@@ -168,7 +175,6 @@ continents <- countrycode(sourcevar = gapminder_t %>%
   mutate(countries = gapminder_t %>% select(country) %>% unique()) %>%
   mutate(r_squared = models_rsquared)
   
-
 
 
 
