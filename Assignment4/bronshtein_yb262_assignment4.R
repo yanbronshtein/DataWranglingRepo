@@ -41,21 +41,11 @@ sort_res_by_abs(mtcars.lm, 20)
 #height for men and women. Finally, make a plot showing the distributions of 
 #height for men and for women on the same plot.
 height_t <- as_tibble(read_tsv("C:\\Users\\Julia\\Downloads\\height.txt"))
-heights <- height_t %>% pull(height)
-head(heights)
-int_match_inches_count <- 0
-float_match_inches_count <- 0
-int_match_feet_count <- 0
-float_match_feet_count <- 0
-feet_ticks_match_count <- 0
-feet_words_count <- 0
-feet_words_count_decimal <- 0
+heights_vec <- height_t %>% pull(height)
+head(heights_vec)
+# Variable initialization
 
-not_match_count <- 0
-centimeters_count <- 0
 
-#feet_regex_int <- 
-#feet_regex_float
 
 convert_ft_2_inches <- function(feet, inches) {
   if (feet < 0 | feet >= 12 | inches < 0 | inches >= 12) {
@@ -65,76 +55,91 @@ convert_ft_2_inches <- function(feet, inches) {
     return(12 * feet + inches)
   }
 }
+clean_height_data = function(heights_vec) {
+  int_match_inches_count <- 0
+  float_match_inches_count <- 0
+  int_match_feet_count <- 0
+  float_match_feet_count <- 0
+  feet_ticks_match_count <- 0
+  feet_words_count <- 0
+  feet_words_count_decimal <- 0
 
+  not_match_count <- 0
+  centimeters_count <- 0
 
-for (row in heights) {
-  row <- trimws(row)
-  # In inches whole number (1)
-  if (str_detect(row, "^[1-9][0-9]{1,2}$")) {
+  for (row in heights_vec) {
+    row <- trimws(row)
     
-    #cat("Match found integer", row, "\n")
-    int_match_inches_count <- int_match_inches_count + 1
-  # In inches floating point number (2)
-  }else if (str_detect(row, "^[1-9][0-9]{1,2}\\.[0-9]{1,9}$")) {
-    #cat("Match found float", row,"\n")
-    float_match_inches_count <- float_match_inches_count + 1
+    # In inches whole number (1)
+    if (str_detect(row, "^[1-9][0-9]{1,2}$")) {
+      
+      #cat("Match found integer", row, "\n")
+      int_match_inches_count <- int_match_inches_count + 1
+    # In inches floating point number (2)
+    }else if (str_detect(row, "^[1-9][0-9]{1,2}\\.[0-9]{1,9}$")) {
+      #cat("Match found float", row,"\n")
+      float_match_inches_count <- float_match_inches_count + 1
+      
+    }
+    # In feet whole number (3)
+    else if (str_detect(row, "^[1-9]$")) {
+      #cat("Match found feet int", row,"\n")
+      feet <- as.numeric(str_extract(row, "^[1-9]$"))
+      convert_ft_2_inches(feet, 0)
+      int_match_feet_count <- int_match_feet_count + 1
+      
+    }
+    #else if (str_detect(row, "^[1-9]\\.[0-9]{1,5}$")) {
+    # In feet floating point number(4)
+    else if (str_detect(row, "^[1-9]{1}[\\.][0-9]{1,5}$")) {
+      #cat("Match found feet float", row,"\n")
+      float_match_feet_count <- float_match_feet_count + 1
+      
+    }
+    #In feet and inches with ticks(5)
+    #else if (str_detect(row, "^[1-9]{1}'\\s*[0-9]{1,2}(\" $")) { 
+    else if (str_detect(row, "^[1-9]{1}'\\s*[0-9]{1,2}(\\.[0-9]{1,9})?(\"|'')$")) {
+      #cat("Match found between 5'0\" and 5'11\"", row,"\n")
+      feet_ticks_match_count <- feet_ticks_match_count + 1
+    }
+    #}
+    # In feet and inches with words(6)
+    else if (str_detect(row, "^[1-9]{1}\\s*(ft | feet | foot)\\s*[0-9]{1,2}\\s*(in | inches)")) {
+    #}else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|feet and|foot)\\s*[0-9]{1,2}\\s*\\.?[0-9]?\\s*(in|inches)")) {
+    
+    #cat("Match found feet and inches", row,"\n")
+      feet_inches <- as.numeric(as.vector(str_extract_all(row,"[0-9.]+", simplify = TRUE)))
+      convert_ft_2_inches(feet_inches[1], feet_inches[2])
+      feet_words_count <- feet_words_count + 1
+      
+    
+    }
+    # In feet and inches with words and floating (7)
+    else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|foot)\\s*[0-9]{1,2}\\.[0-9]{1,9}\\s*(in | inches)$")) {
+      #cat("Match found feet and inches with decimal", row,"\n")
+      feet_inches <- as.numeric(as.vector(str_extract_all(row,"[0-9.]+", simplify = TRUE)))
+      #cat(convert_ft_2_inches(feet_inches[1], feet_inches[2]))
+      feet_words_count <- feet_words_count + 1
+      
+      feet_words_count_decimal <- feet_words_count_decimal + 1
+    }
+    # Height explicitly in centimeters
+    else if (str_detect(row, "^[1-9][0-9]{2,3}\\s*(cm|centimeter|centimeters)$")) {
+      #cat("Match found centimeters", row, "\n")
+      centimeters_count <- centimeters_count + 1
+      
+    }
+      
+    else {
+      cat("Match not found", row, "\n")
+      not_match_count <- not_match_count + 1
+    }
     
   }
-  # In feet whole number (3)
-  else if (str_detect(row, "^[1-9]$")) {
-    #cat("Match found feet int", row,"\n")
-    feet <- as.numeric(str_extract(row, "^[1-9]$"))
-    convert_ft_2_inches(feet, 0)
-    int_match_feet_count <- int_match_feet_count + 1
-    
-  }
-  #else if (str_detect(row, "^[1-9]\\.[0-9]{1,5}$")) {
-  # In feet floating point number(4)
-  else if (str_detect(row, "^[1-9]{1}[\\.][0-9]{1,5}$")) {
-    #cat("Match found feet float", row,"\n")
-    float_match_feet_count <- float_match_feet_count + 1
-    
-  }
-  #In feet and inches with ticks(5)
-  #else if (str_detect(row, "^[1-9]{1}'\\s*[0-9]{1,2}(\" $")) {
-  else if (str_detect(row, "^([1-9]{1}'\\s*)?[0-9]{1,2}(\"|'')$")) {
-    #cat("Match found between 5'0\" and 5'11\"", row,"\n")
-    feet_ticks_match_count <- feet_ticks_match_count + 1
-  }
-  #}
-  # In feet and inches with words(6)
-  else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|foot)\\s*[0-9]{1,2}\\s*(in | inches)$")) {
-  #}else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|feet and|foot)\\s*[0-9]{1,2}\\s*\\.?[0-9]?\\s*(in|inches)")) {
-  
-  #cat("Match found feet and inches", row,"\n")
-    
-   feet_words_count <- feet_words_count + 1
-    
-  
-  }
-  # In feet and inches with words and floating (7)
-  else if (str_detect(row, "^[1-9]{1}\\s*(ft|feet|foot)\\s*[0-9]{1,2}\\.[0-9]{1,9}\\s*(in | inches)$")) {
-    cat("Match found feet and inches with decimal", row,"\n")
-    feet_words_count_decimal <- feet_words_count_decimal + 1
-  }
-  # Height explicitly in centimeters
-  else if (str_detect(row, "^[1-9][0-9]{2,3}\\s*(cm|centimeter|centimeters)$")) {
-    #cat("Match found centimeters", row, "\n")
-    centimeters_count <- centimeters_count + 1
-    
-  }
-    
-  else {
-    cat("Match not found", row, "\n")
-    not_match_count <- not_match_count + 1
-  }
-  
 }
-cat("match count", match_count)
-cat("not match count", not_match_count)
 
 
-
+clean_height_data(heights_vec)
 convert_feet_2_inches <- function(height_ft) {
   if (in_feet) {
     return(as.numeric(str_extract(height_ft, pattern)) * 12)
