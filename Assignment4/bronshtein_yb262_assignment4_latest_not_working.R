@@ -37,14 +37,10 @@ sort_res_by_abs(mtcars.lm, 20)
 #height for men and women. Finally, make a plot showing the distributions of 
 #height for men and for women on the same plot.
 
-#Read in data by treating it as a tsv from the text file
-height_t <- as_tibble(read_tsv("C:\\Users\\Julia\\Downloads\\height.txt"))
-#Pull the data into a vector
-heights_vec <- height_t %>% pull(height)
 
 # This helper function is used to convert a height given in feet and inches to 
 #inches
-convert_ft_2_inches <- function(feet, inches) {
+convert_ft_2_inches <- function(feet, inches=0) {
   if (feet < 0 || feet >= 12 || inches < 0 || inches >= 12) {
     return(NA)
   }else {
@@ -52,31 +48,47 @@ convert_ft_2_inches <- function(feet, inches) {
   }
 }
 
-# The function below takes in a vector of heights as strings and outputs
-# a numeric vector. The heights are cleaned according to rules specified in
-# regular expressions. The failed matches are filled with NA in the returned vector
-special_counter <- 0
-#clean_height_data <- function(heights_vec) {
+# Read in height data
+height_t <- as_tibble(read_tsv("C:\\Users\\Julia\\Downloads\\height.txt")) %>% 
+  select(sex, height)
+heights_vec <- height_t %>% pull(height)
+
+# Initialize counters
+int_match_inches_count <- 0
+float_match_inches_count <- 0
+int_match_feet_count <- 0
+float_match_feet_count <- 0
+feet_ticks_match_count <- 0
+feet_words_count <- 0
+feet_words_count_decimal <- 0
+
+feet_only_ticks <- 0
+not_match_count <- 0
+centimeters_count <- 0
+
+clean_height_data <- function(heights_vec) {
   # Create a numeric vector to store cleaned up height data
   cleaned_heights_vec <- numeric(0) 
   for (row in heights_vec) {
     row <- trimws(row)
-    
-    if (str_detect(row, "^[0-9]*``'$")) {
-      cat("Match found feet only", row,"\n")
-      
-      feet <- as.numeric(str_extract(row, "[0-9]"))
-      cleaned_heights_vec <- c(cleaned_heights_vec, convert_ft_2_inches(feet, 0))
-      special_counter <- special_counter + 1
+    #In feet only with ticks
+    if (str_detect(row, "^[1-9]'$")) {
+      str_vec <- as.vector(str_extract_all(row, "[0-9.]+", simplify = TRUE))
+      if (length(str_vec) ==1) {
+        feet <- as.numeric(str_vec[1])
+        result <- convert_ft_2_inches(feet)
+        cleaned_heights_vec <- c(cleaned_heights_vec, result)
+      } 
     }
-    
     # In inches whole number (1)
     else if (str_detect(row, "^[1-9][0-9]{1,2}$")) {
       cleaned_heights_vec <- c(cleaned_heights_vec, as.numeric(row))
+      int_match_inches_count <- int_match_inches_count + 1
     }
     # In inches floating point number (2)
     else if (str_detect(row, "^[1-9][0-9]{1,2}\\.[0-9]{1,9}$")) {
       cleaned_heights_vec <- c(cleaned_heights_vec, as.numeric(row))
+      float_match_inches_count <- float_match_inches_count + 1
       
     }
     
@@ -84,25 +96,22 @@ special_counter <- 0
     else if (str_detect(row, "^[1-9]$")) {
       feet <- as.numeric(str_extract(row, "^[1-9]$"))
       cleaned_heights_vec <- c(cleaned_heights_vec, convert_ft_2_inches(feet, 0))
+      int_match_feet_count <- int_match_feet_count + 1
     }
     # In feet floating point number(4)
     else if (str_detect(row, "^[1-9]{1}[\\.][0-9]{1,5}$")) {
       feet <- as.numeric(str_extract(row, "^[1-9].[1-9]{1,9}$"))
       cleaned_heights_vec <- c(cleaned_heights_vec, convert_ft_2_inches(feet, 0))
+      float_match_feet_count <- float_match_feet_count + 1
     }
-    #In inches with ticks
+    #In inches only with ticks
     else if (str_detect(row, "^[0-9]{2,3}(\"|'')$")) {
       cleaned_heights_vec <- c(cleaned_heights_vec, 
                                as.numeric(str_extract(row, "[0-9.]+")))
-    }
-    #In feet with ticks
-    else if (str_detect(row, "^[0-9]{1,2}'")) {
-      cleaned_heights_vec <- c(cleaned_heights_vec, 
-                               as.numeric(str_extract(row, "[0-9.]+")))
-    }
       
+    }
     #In feet and inches with ticks(5)
-    else if (str_detect(row, "^[1-9]{1}'(\\s*[0-9]{1,2}(\\.[0-9]{1,9})?(\"|'')?)?$")) {
+    else if (str_detect(row, "^[1-9]{1}'([0-9]{1,2}(\\.[0-9]{1,9})?(\"|'')?)?$")) {
       feet_inches <- as.numeric(as.vector(str_extract_all(row,"[0-9.]+", simplify = TRUE)))
       cleaned_heights_vec <- c(cleaned_heights_vec,
                                convert_ft_2_inches(feet_inches[1], feet_inches[2]))
@@ -130,26 +139,36 @@ special_counter <- 0
       cleaned_heights_vec <- c(cleaned_heights_vec, NA)
     }
   }
-#  return(cleaned_heights_vec)
-#}
+  return(cleaned_heights_vec)
+}
 
 #Call clean_height_data to extract a cleaned numeric column
 out <- clean_height_data(heights_vec)
 #Insert the cleaned column back into the height_t as a new column
-height_t <- height_t %>% mutate(heights_cleaned=round(out))
-height_distributions_t <- height_t %>% select(sex, heights_cleaned) %>%
-  group_by(sex, heights_cleaned) %>% arrange(sex, heights_cleaned) %>% summarise(n = n())
-#Add counts column
+height_t <- height_t %>% mutate(heights_cleaned=round(cleaned_heights_vec)) %>%
+  select(sex, heights_cleaned) %>% rename(height = heights_cleaned)
 
 #Derive the count of non-NA entries
-count_na <- height_t %>% select(heights_cleaned) %>% is.na() %>% sum %>% as.numeric()
+count_na <- height_t %>% select(height) %>% is.na() %>% sum %>% as.numeric()
 count_not_na <- dim(height_t)[1] - count_na
 
-ggplot(data = height_t, mapping = aes(x = heights_cleaned, y = count(heights_cleaned))) +
-  geom_point(aes(color = sex)) +
-  labs(
-    title = "Distribution of height for Males and females"
-  ) +
+# Create male plot
+height_males_t <- height_t %>% filter(sex=="Male") %>% group_by(height) %>% 
+  summarise(sex = sex, n = n())
+
+# Create the female plot
+height_females_t <- height_t %>% filter(sex=="Female") %>% group_by(height) %>% 
+  summarise(sex = sex, n = n())
+
+#Create the combined data from the two data frames
+combined_data <- bind_rows(height_males_t, height_females_t) %>% filter(!is.na(height))
+ggplot(data = combined_data, mapping = aes(x = height, y = n)) +
+  geom_point(mapping = aes(color=sex)) +
+  labs (
+    title = "Male and female height distribution",
+    x = "Height in inches",
+    y = "Count"
+  )  +
   theme(plot.title = element_text(hjust = 0.5))
 
 ## Split the gapminder data by country and use map() to calculate, by country,
