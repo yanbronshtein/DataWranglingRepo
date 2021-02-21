@@ -56,7 +56,7 @@ convert_ft_2_inches <- function(feet, inches) {
 # a numeric vector. The heights are cleaned according to rules specified in
 # regular expressions. The failed matches are filled with NA in the returned vector
 special_counter <- 0
-clean_height_data <- function(heights_vec) {
+#clean_height_data <- function(heights_vec) {
   # Create a numeric vector to store cleaned up height data
   cleaned_heights_vec <- numeric(0) 
   for (row in heights_vec) {
@@ -130,8 +130,8 @@ clean_height_data <- function(heights_vec) {
       cleaned_heights_vec <- c(cleaned_heights_vec, NA)
     }
   }
-  return(cleaned_heights_vec)
-}
+#  return(cleaned_heights_vec)
+#}
 
 #Call clean_height_data to extract a cleaned numeric column
 out <- clean_height_data(heights_vec)
