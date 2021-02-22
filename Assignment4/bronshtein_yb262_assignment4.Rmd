@@ -29,26 +29,51 @@ first with no argument for n, then with n = 6, and then with n = 40 (error messa
 
 ```{r echo=TRUE}
 sort_res_by_abs <- function(obj, n = 5) {
-  if (!("lm" %in% class(obj))) stop ("obj must have class 'lm'")
-  num_res <- length(obj$residuals)
-  res <- as_tibble(obj$residuals)
-  print("Num res")
-  print(num_res)
-  if (n > num_res) {
-    stop (paste("the n value", n, "is larger than the number of residuals", 
-                num_res, sep = " "))
-  } 
-  sorted_res <- res %>% rename(res = value) %>% 
-    mutate(abs_res = abs(res)) %>%
-    arrange(desc(abs_res)) %>% 
-    select(res) %>% head(n)
-  return(as.list(sorted_res))
-  
+  if (!("lm" %in% class(obj))) { 
+    cat("ERROR: obj must have class 'lm'", "\n")
+    return(NA)
+  }
+  else {
+    num_res <- length(obj$residuals)
+    res <- as_tibble(obj$residuals)
+    if (n > num_res) {
+      cat("ERROR: the n value", n, "is larger than the number of residuals in the lm object", 
+        num_res, sep = " ","\n")
+      return(NA)
+    } else { 
+      sorted_res <- res %>% rename(res = value) %>% 
+      mutate(abs_res = abs(res)) %>%
+      arrange(desc(abs_res)) %>% 
+      select(res) %>% head(n)
+      cat("top", n, "residuals sorted by absolute value:\n", sep = " ")
+      return(as.list(sorted_res))
+    }
+  }
 }
 
-mtcars.lm <- lm(mpg ~ disp, data = mtcars)
-sort_res_by_abs(mtcars.lm, 20)
 ```
+
+**Train the mtcars.lm object**
+```{r echo=TRUE}
+mtcars.lm <- lm(mpg ~ disp, data = mtcars)
+```
+**Demonstrate that the function works with no arguments**
+```{r echo=TRUE}
+sort_res_by_abs(mtcars.lm)
+```
+**Demonstrate that the function works for n = 6**
+```{r echo=TRUE}
+sort_res_by_abs(mtcars.lm, n = 6)
+```
+**Demonstrate that the function displays an error message for n=40**
+```{r echo=TRUE}
+sort_res_by_abs(mtcars.lm, n = 40)
+```
+**Demonstrate that the function displays an error message if an lm object is not provided**
+```{r echo=TRUE}
+sort_res_by_abs("This is an object of the wrong class", n = 40)
+```
+
 
 ## Question 2
 Read the file "height.txt" in the folder, and use regular expressions to clean the height variable and convert it into a numeric column representing height in inches. Determine and report the number of non-missing values of height for men and women. Finally, make a plot showing the distributions of height for men and for women on the same plot.
@@ -107,7 +132,7 @@ clean_height_data <- function(heights_vec) {
       } 
     }
     # In inches whole number (1)
-    else if (str_detect(row, "^[1-9][0-9]{1,2}$")) {
+    else if (str_detect(row, "[1-9][0-9]{1,2}")) {
       cleaned_heights_vec <- c(cleaned_heights_vec, as.numeric(row))
       int_match_inches_count <- int_match_inches_count + 1
     }
@@ -183,31 +208,21 @@ height_t <- height_t %>% mutate(heights_cleaned=round(out)) %>%
 ```{r echo=TRUE}
 count_na <- height_t %>% select(height) %>% is.na() %>% sum %>% as.numeric()
 count_not_na <- dim(height_t)[1] - count_na
+count_not_na
 ```
 
-**Create two dataframes for males and females, calculating the frequency for each height. Then combine the two dataframes back into one and plot the height distribution using a ggplot**
-
+**Create the ggplot but first filter the heights to remove outliers**
 ```{r echo=TRUE}
-# Create male plot
-height_males_t <- height_t %>% filter(sex=="Male") %>% group_by(height) %>% 
-  summarise(sex = sex, n = n())
-
-# Create the female plot
-height_females_t <- height_t %>% filter(sex=="Female") %>% group_by(height) %>% 
-  summarise(sex = sex, n = n())
-
-#Create the combined data from the two data frames
-combined_data <- bind_rows(height_males_t, height_females_t) %>% filter(!is.na(height))
-ggplot(data = combined_data, mapping = aes(x = height, y = n)) +
-  geom_point(mapping = aes(color=sex)) +
-  labs (
-    title = "Male and female height distribution",
-    x = "Height in inches",
-    y = "Count"
-  )  +
+height_t <- height_t %>% filter(height < 96, height > 50)
+ggplot(mapping = aes(x = sex, y = as.numeric(height)), data = height_t) + 
+  geom_boxplot() +
+  labs(
+    title = "Male vs Female Height Distribution in inches",
+    x = "Sex",
+    y = "Height in inches"
+  ) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
-
 
 ## Question 3
 Split the gapminder data by country and use map() to calculate, by country,

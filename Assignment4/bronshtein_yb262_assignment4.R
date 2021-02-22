@@ -12,23 +12,34 @@ library(gapminder)
 library(countrycode)
 library(measurements)
 sort_res_by_abs <- function(obj, n = 5) {
-  if (!("lm" %in% class(obj))) stop ("obj must have class 'lm'")
-  num_res <- length(obj$residuals)
-  res <- as_tibble(obj$residuals)
-  if (n > num_res) {
-    stop (paste("the n value", n, "is larger than the number of residuals", 
-                num_res, sep = " "))
-  } 
-  sorted_res <- res %>% rename(res = value) %>% 
-    mutate(abs_res = abs(res)) %>%
-    arrange(desc(abs_res)) %>% 
-    select(res) %>% head(n)
-  return(as.list(sorted_res))
-  
+  if (!("lm" %in% class(obj))) { 
+    cat("ERROR: obj must have class 'lm'", "\n")
+    return(NA)
+  }
+  else {
+    num_res <- length(obj$residuals)
+    res <- as_tibble(obj$residuals)
+    if (n > num_res) {
+      cat("ERROR: the n value", n, "is larger than the number of residuals in the lm object", 
+          num_res, sep = " ","\n")
+      return(NA)
+    } else { 
+      sorted_res <- res %>% rename(res = value) %>% 
+        mutate(abs_res = abs(res)) %>%
+        arrange(desc(abs_res)) %>% 
+        select(res) %>% head(n)
+      cat("top", n, "residuals sorted by absolute value:\n", sep = " ")
+      return(as.list(sorted_res))
+    }
+  }
 }
 
 mtcars.lm <- lm(mpg ~ disp, data = mtcars)
-sort_res_by_abs(mtcars.lm, 20)
+sort_res_by_abs(mtcars.lm)
+sort_res_by_abs(mtcars.lm, n = 6)
+sort_res_by_abs(mtcars.lm, n = 40)
+sort_res_by_abs("This is an object of the wrong class", n = 40)
+
 
 ## Question 2
 #Read the file "height.txt" in the folder, and use regular expressions to 
@@ -154,24 +165,17 @@ height_t <- height_t %>% mutate(heights_cleaned=round(out)) %>%
 count_na <- height_t %>% select(height) %>% is.na() %>% sum %>% as.numeric()
 count_not_na <- dim(height_t)[1] - count_na
 
-# Create male plot
-height_males_t <- height_t %>% filter(sex=="Male") %>% group_by(height) %>% 
-  summarise(sex = sex, n = n())
-
-# Create the female plot
-height_females_t <- height_t %>% filter(sex=="Female") %>% group_by(height) %>% 
-  summarise(sex = sex, n = n())
-
-#Create the combined data from the two data frames
-combined_data <- bind_rows(height_males_t, height_females_t) %>% filter(!is.na(height))
-ggplot(data = combined_data, mapping = aes(x = height, y = n)) +
-  geom_point(mapping = aes(color=sex)) +
-  labs (
-    title = "Male and female height distribution",
-    x = "Height in inches",
-    y = "Count"
-  )  +
+height_t <- height_t %>% filter(height < 96, height > 50)
+ggplot(mapping = aes(x = sex, y = as.numeric(height)), data = height_t) + 
+  geom_boxplot() +
+  labs(
+    title = "Male vs Female Height Distribution in inches",
+    x = "Sex",
+    y = "Height in inches"
+  ) +
   theme(plot.title = element_text(hjust = 0.5))
+  
+
 
 #question 3:
 ## Split the gapminder data by country and use map() to calculate, by country,
