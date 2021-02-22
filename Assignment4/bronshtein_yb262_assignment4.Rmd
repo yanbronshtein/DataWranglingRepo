@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Import the libraries
 ```{r}
 library(tidyverse)
+library(gapminder)
 ```
 
 ## Question 1
@@ -53,7 +54,7 @@ sort_res_by_abs(mtcars.lm, 20)
 Read the file "height.txt" in the folder, and use regular expressions to clean the height variable and convert it into a numeric column representing height in inches. Determine and report the number of non-missing values of height for men and women. Finally, make a plot showing the distributions of height for men and for women on the same plot.
 
 
-**Read in height data and create a vector ```heights_vec``` for easier manipulation
+**Read in height data and create a vector ```heights_vec``` for easier manipulation**
 ```{r echo=TRUE}
 height_t <- as_tibble(read_tsv("C:\\Users\\Julia\\Downloads\\height.txt")) %>% 
   select(sex, height)
@@ -61,7 +62,7 @@ heights_vec <- height_t %>% pull(height)
 ```
 
 
-This helper function is used to convert a height given in feet and inches to inches
+**This helper function is used to convert a height given in feet and inches to inches**
 ```{r}
 convert_ft_2_inches <- function(feet, inches=0) {
   if (feet < 0 || feet >= 12 || inches < 0 || inches >= 12) {
@@ -206,3 +207,48 @@ ggplot(data = combined_data, mapping = aes(x = height, y = n)) +
   )  +
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
+
+## Question 3
+Split the gapminder data by country and use map() to calculate, by country,
+the R-squared for the linear model lifeExp ~ log10(gdpPercap). Using ggplot2,
+make a set of boxplots of R-squared by continent.
+**Load the gapminder data into a tibble**
+```{r echo=TRUE}
+gapminder_t <- as_tibble(gapminder)
+```
+**Extract the values of R_squared for each country by performing the following steps:** 
+**a). call split() to split the gapminder tibble data into separate tibbles by country**
+**b). Call map() to apply lm() which creates a linear model based on the equation**
+**lifeExp ~ log10(gdpPercap)**
+**Make sure to set the weights field to population**
+**c).Use map yet again to call summary() on every lm() *object**
+**d).Now we call map_dbl() to create a list of all the R^2**
+```{r echo=TRUE}
+countries_rsquared <- gapminder_t %>% 
+  split(.$country) %>%
+  map(~ lm(lifeExp ~ log10(gdpPercap), weights = pop, data = .)) %>%
+  map(summary) %>% 
+  map_dbl("r.squared")
+```
+
+**Now we need to extract all the country names of the countries and all the r^2** 
+**values to create a vertical tibble. We perform a left_join with the original gap_minder**
+**tibble to get all the original columns**
+```{r echo=TRUE}
+continent_countries_t <- countries_rsquared %>%
+  tibble(country = names(.), R_squared = .) %>%
+  left_join(gapminder_t)
+
+```
+
+**For the tibble needed for the ggplot() we only need the columns continent and R_squared**
+```{r echo=TRUE}
+final_t <- continent_countries_t %>% select(continent, R_squared)
+```
+**Generate the ggplot**
+```{r echo=TRUE}
+ggplot(data = final_t, mapping = aes(x = R_squared, y = continent)) +
+  geom_boxplot()
+```
+
