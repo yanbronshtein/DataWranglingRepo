@@ -1,0 +1,56 @@
+---
+title: "Second Markdown Example"
+author: "Tirthankar Dasgupta"
+date: "January 25, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(nycflights13)
+```
+
+## Some Notes on Flights
+
+In this document, we will:
+
+* Try some markdown code, including 
+    + headers
+    + items
+* Include some inline R code
+* Include a plot
+
+The flights data.frame in the nycflights13 package has data on `r nrow(flights)` flights. Some of the flights have missing data, denoted by "NA". That means if we type
+```{r}
+mean(flights$dep_delay)
+```
+the answer is NA, as shown above.
+
+Instead, type
+```{r}
+mean(flights$dep_delay, na.rm = TRUE)
+```
+(The mean function has an option called na.rm that, when set to TRUE, will remove NAs and then calculate the mean.) 
+
+The mean flight delay is `r mean(flights$dep_delay, na.rm = TRUE)`. The distribution of delays can be visualized with a histogram, shown below,
+
+
+
+```{r chunk1, warning = FALSE}
+ggplot(data = flights) + geom_histogram(mapping = aes(dep_delay))
+
+```
+
+
+
+
+or as a density plot.
+
+```{r density}
+ggplot(data = flights) + geom_density(mapping = aes(dep_delay)) 
+```
+
+
+It's important to note that your R code either goes inside the triple ticks, \`\`\`, or the single tick, \`, and don't forget the "r".
+
