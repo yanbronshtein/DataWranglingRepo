@@ -45,3 +45,8 @@ cat("Total words spoken by Hobbits", hobbit_wc)
 man_wc <- words_by_race_t %>% filter(Race == "Man") %>% pull(words_by_race) %>% as.numeric()
 cat("Total words spoken by Man", man_wc)
 
+
+
+#4.Create a data frame with totals by race and movie, calling it by_race_film.
+by_race_film_t <- lotr_t %>% group_by(Film, Race) %>% summarise(words_by_race_movie = sum(Words))
+
