@@ -60,6 +60,7 @@ by_race_film_t <- lotr_t %>% group_by(Film, Race) %>% summarise(words_by_race_mo
 #model fit. Obtain a scatter plot of AIC versus BIC and comment.
 
 gapminder_t <- gapminder %>% as_tibble()
+
 compute_aic_bic = function(p1, p2, p3) {
   countries_arima <- gapminder_t %>% 
   split(.$country) %>%
@@ -83,12 +84,12 @@ ggplot(data = m1 , mapping = aes(x = AIC, y = BIC)) +
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
 
-#Now repeat the previous step for four other models: ARIMA(0,0,1), ARIMA(0,0,2), 
+#2. Now repeat the previous step for four other models: ARIMA(0,0,1), ARIMA(0,0,2), 
 #ARIMA(0,0,3), ARIMA(0,1,0), ARIMA(0,1,1), and in a single plot, show boxplots 
 #of AIC values for the five models. Based on the boxplot, which of these five 
 #models do you think fits the data best for most countries?
-
-m1 <- m1 %>% mutate(m = "ARIMA(0,0,1)" )
+#The best model has the minimal AIC, so ARIMA(0,1,1) is the best
+m1 <- m1 %>% mutate(Model = "ARIMA(0,0,1)" )
 m2 <- compute_aic_bic(0, 0, 2) %>% select(AIC) %>% mutate(Model = "ARIMA(0,0,2)") 
 m3 <- compute_aic_bic(0, 0, 3) %>% select(AIC) %>% mutate(Model = "ARIMA(0,0,3)")
 m4 <- compute_aic_bic(0, 1, 0) %>% select(AIC) %>% mutate(Model = "ARIMA(0,1,0)")
@@ -99,3 +100,21 @@ models_t <- bind_rows(m1, m2, m3, m4, m5)
 ggplot(data = models_t, mapping = aes(x = Model, y = AIC)) + 
   geom_boxplot() + 
   labs(title = "AIC distribution by Arima Model")
+
+#3. Filter the data only for continent Europe. 
+#For the best model identified in step 2, create a tibble showing the 
+#country-wise model parameters (moving average coefficients) and their 
+#errors using the broom package.
+
+
+
+
+gapminder_europe <- gapminder_t %>% filter(continent == "Europe")
+countries_arima_europe <- gapminder_europe %>% 
+  group_by(country) %>%
+  do(tidy(arima(.$lifeExp), order = c(0, 1, 1), conf.int = TRUE))
+
+
+
+
+aic_bic_Europe <- compute_aic_bic_europe(0, 1, 1)
