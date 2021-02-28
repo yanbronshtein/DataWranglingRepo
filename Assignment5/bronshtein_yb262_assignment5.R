@@ -1,5 +1,6 @@
 library(tidyverse)
 library(broom)
+library(gapminder)
 #Problem 1
 fellowship_t <- read_csv("https://raw.githubusercontent.com/jennybc/lotr-tidy/master/data/The_Fellowship_Of_The_Ring.csv") %>% as_tibble()
 two_towers_t <- read_csv("https://raw.githubusercontent.com/jennybc/lotr-tidy/master/data/The_Two_Towers.csv") %>% as_tibble()
@@ -50,3 +51,23 @@ cat("Total words spoken by Man", man_wc)
 #4.Create a data frame with totals by race and movie, calling it by_race_film.
 by_race_film_t <- lotr_t %>% group_by(Film, Race) %>% summarise(words_by_race_movie = sum(Words))
 
+
+################Problem 2#######################################################
+
+#  Split/group the gapminder data by country. For each country, 
+#fit an ARIMA(0,0,1) or MA(1) model to lifeExp, and produce a tibble that 
+#contains the country-wise values of AIC and BIC, two measures of goodness of 
+#model fit. Obtain a scatter plot of AIC versus BIC and comment.
+
+gapminder_t <- gapminder %>% as_tibble()
+countries_arima <- gapminder_t %>% 
+  split(.$country) %>%
+  map(~arima(.$lifeExp, order = c(0, 0, 1))) %>%
+  map(glance)
+
+countries_aic <- countries_arima %>% map_dbl(~.$AIC)
+countries_bic <- countries_arima %>% map_dbl(~.$BIC)
+countries_t <- gapminder_t %>% select(country) %>% 
+  unique() %>% 
+  mutate(AIC = countries_aic) %>%
+  mutate(BIC = countries_bic)
