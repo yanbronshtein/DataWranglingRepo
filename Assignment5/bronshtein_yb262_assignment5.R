@@ -136,6 +136,12 @@ countries_ma_estimate_error <-
 #Which one is wider?
 
 gapminder_1992_t <- gapminder_t %>% filter(year == 1992)
+lm_1992 <- gapminder_1992_t %>% 
+  lm(lifeExp ~ log10(gdpPercap), weights = pop, data = .)
+
+lm_1992_coef <- coef(lm_1992)
+lm_1992_confint <- confint(lm_1992, level = 0.95)
+
 ggplot(data = gapminder_1992_t, 
        mapping = aes(x = log10(gdpPercap), y = lifeExp)) +
   geom_point() + 
@@ -143,11 +149,6 @@ ggplot(data = gapminder_1992_t,
     title = "Life Expectancy vs log10(gdpPercapita) for gapminder 1992 Data"
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
-
-
-#countries_lm <- gapminder_1992_t %>% 
-#  group_by(country) %>%
-#  map(~ lm(lifeExp ~ log10(gdpPercap), weights = pop, data = .))
 
 
 #(i) bootstrapped 95% confidence intervals for the slope coefficient 
