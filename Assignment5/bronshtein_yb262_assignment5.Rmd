@@ -307,3 +307,4 @@ ggplot(conf_int_90) +
     title = "Plot of prediction intervals for bootstraps(500) of a Linear Model",
     x = "log10(gdpPercap)")
 ```
+*I believe that the bootstrapped is wider*
