@@ -1,6 +1,7 @@
 library(tidyverse)
 library(broom)
 library(gapminder)
+library(rsample)
 #Problem 1
 fellowship_t <- read_csv("https://raw.githubusercontent.com/jennybc/lotr-tidy/master/data/The_Fellowship_Of_The_Ring.csv") %>% as_tibble()
 two_towers_t <- read_csv("https://raw.githubusercontent.com/jennybc/lotr-tidy/master/data/The_Two_Towers.csv") %>% as_tibble()
@@ -63,7 +64,8 @@ gapminder_t <- gapminder %>% as_tibble()
 
 compute_aic_bic = function(p1, p2, p3) {
   countries_arima <- gapminder_t %>% 
-  split(.$country) %>%
+  group_by(country) %>%
+  group_split() %>%
   map(~arima(.$lifeExp, order = c(p1, p2, p3))) %>%
   map(glance)
 
@@ -106,15 +108,87 @@ ggplot(data = models_t, mapping = aes(x = Model, y = AIC)) +
 #country-wise model parameters (moving average coefficients) and their 
 #errors using the broom package.
 
-
-
-
 gapminder_europe <- gapminder_t %>% filter(continent == "Europe")
-countries_arima_europe <- gapminder_europe %>% 
+countries_arima_europe_tidy <- gapminder_europe %>%
   group_by(country) %>%
-  do(tidy(arima(.$lifeExp), order = c(0, 1, 1), conf.int = TRUE))
+  group_split() %>%
+  map(~arima(.$lifeExp, order = c(0, 1, 1))) %>%
+  map(tidy)
+
+countries_ma_estimate <- countries_arima_europe_tidy %>% 
+  map_dbl(~.$estimate)
+countries_ma_std.error <- countries_arima_europe_tidy %>% 
+  map_dbl(~.$std.error)
+
+countries_list <- gapminder_europe %>% select(country) %>% unique()
+countries_ma_estimate_error <- 
+  tibble(countries_list, 
+         estimate = countries_ma_estimate, error = countries_ma_std.error)
+  
+
+#4. Now filter the data only for year 1992. Plot lifeExp against log10(gdpPercapita). 
+#Fit a linear model of lifeExp on log10(gdpPercapita) using population as weights 
+#and obtain (i) bootstrapped 95% confidence intervals for the slope coefficient 
+#and (ii) bootstrapped 90% prediction intervals for each data point using 500 
+#bootstrapped samples (show a plot of the prediction intervals). 
+#Compare the bootstrapped 95% confidence intervals for the estimated slope 
+#coefficient with those generated automatically by the lm() function. 
+#Which one is wider?
+
+gapminder_1992_t <- gapminder_t %>% filter(year == 1992)
+ggplot(data = gapminder_1992_t, 
+       mapping = aes(x = log10(gdpPercap), y = lifeExp)) +
+  geom_point() + 
+  labs(
+    title = "Life Expectancy vs log10(gdpPercapita) for gapminder 1992 Data"
+  ) + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+#countries_lm <- gapminder_1992_t %>% 
+#  group_by(country) %>%
+#  map(~ lm(lifeExp ~ log10(gdpPercap), weights = pop, data = .))
+
+
+#(i) bootstrapped 95% confidence intervals for the slope coefficient 
+#and 
+set.seed(1)
+alpha1 = 0.05
+boot_lm <- gapminder_1992_t %>% bootstraps(500)
+boot_lm1 <- map(boot_lm$splits, ~as_tibble(.)) %>%
+  map(~tidy(lm(lifeExp ~ log10(gdpPercap), weights = pop, data = .))) %>%
+  bind_rows(.)
+conf_int_95 <- boot_lm1 %>% 
+  group_by(term) %>% 
+  summarise(conf.low = quantile(estimate, alpha1 /2),
+                                      conf.high = quantile(estimate, 1 - alpha1 /2),
+                                      median = median(estimate))
+conf_int_95
 
 
 
+#(ii) bootstrapped 90% prediction intervals
+alpha2 = 0.1
+boot_lm2 <- map(boot_lm$splits, ~as_tibble(.)) %>%
+  map(~augment(lm(lifeExp ~ log10(gdpPercap), weights = pop, data = .))) %>%
+  bind_rows(.) %>% rename(log_gdp_percap = names(.)[2])
 
-aic_bic_Europe <- compute_aic_bic_europe(0, 1, 1)
+conf_int_90 <- boot_lm2 %>% group_by(log_gdp_percap) %>%
+  summarise(conf.low = quantile(.fitted, alpha2 / 2), 
+            conf.high = quantile(.fitted, 1 - alpha2 / 2), 
+            median = median(.fitted))
+
+conf_int_90
+#Compare the bootstrapped 95% confidence intervals for the estimated slope 
+#coefficient with those generated automatically by the lm() function. 
+#Which one is wider?
+
+# 95% : log10(gdpPercap)     9.43      16.1   12.5 [diff = 6.67]
+# 90%:  log10(gdpPercap)    55.1      77.2   67.4  [diff = 12.3]
+
+
+ 
+cat(confint(
+  lm(lifeExp ~ log10(gdpPercap), weights = pop, data = gapminder_1992_t),
+  'log10(gdpPercap)',
+  level = alpha1))
