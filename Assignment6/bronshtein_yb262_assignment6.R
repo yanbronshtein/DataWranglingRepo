@@ -1,6 +1,7 @@
 library(tidyverse)
 library(tidytext)
 library(gutenbergr)
+library(textdata)
 #PROBLEM 1:
 
 #1.Download the texts of Treasure Island and Kidnapped by Robert Louis Stevenson, 
@@ -10,20 +11,27 @@ library(gutenbergr)
 #Then you should be able to find the web page for the book, and the 
 #e-book number can be found in the bibliographic record section.
 
-treasure_island_t <- gutenberg_download(c(120)) %>% as_tibble()
-kidnapped_t <- gutenberg_download(c(421)) %>% as_tibble()
+treasure_island_t <- gutenberg_download(c(120)) %>% as_tibble() %>%
+  mutate(linenumber = row_number())
+  
+kidnapped_t <- gutenberg_download(c(421)) %>% as_tibble() %>%
+  mutate(linenumber = row_number())
+
 tidy_treasure_island_t <- treasure_island_t %>%
   unnest_tokens(word, 
                 text, 
                 token = "words") %>%
-  anti_join(stop_words)
+  anti_join(stop_words) %>%
+  filter(word != "NA")
 
 
 tidy_kidnapped_t <- kidnapped_t %>%
   unnest_tokens(word, 
                 text, 
                 token = "words") %>%
-  anti_join(stop_words)
+  anti_join(stop_words) %>%
+  filter(word != "NA")
+
 
 
 #2.Find the 10 most common words (that are not stop words) in each novel.
@@ -37,19 +45,6 @@ top10_words_treasure_island <- tidy_treasure_island_t %>%
 top10_words_kidnapped <- tidy_kidnapped_t %>%
   count(word, sort = TRUE) %>%
   head(10)
-
-#treasure_island_t <- tibble(treasure_island) %>%
-#  mutate(linenumber = row_number(),
-#         part = cumsum(str_detect(text, "^PART")),
-#         chapter = cumsum(str_detect(text, "[0-9]{1,}.")))
-#top10_words_treasure_island <- treasure_island_t %>%
-#  unnest_tokens(word, 
-#                text, 
-#                to_lower = TRUE,
-#                token = "words") %>%
-#  anti_join(stop_words) %>%
-#  count(word, sort = TRUE) %>%
-#  head(10)
 
 
 #3.
@@ -122,10 +117,55 @@ both_highest_freq <-
   head(2)
   
 #4.Find the 10 most common bigrams in Treasure Island that do not include stop words.
+treasure_bigram <- treasure_island_t %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+  filter(bigram != "NA") %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  unite(bigram, word1, word2, sep=" ")
+
+kidnapped_bigram <- kidnapped_t%>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+  filter(bigram != "NA") %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  unite(bigram, word1, word2, sep=" ")
+
+
+
+top_10_treasure_bigrams <- treasure_bigram %>%
+  count(bigram, sort = TRUE)
+
+top_10_kidnapped_bigrams <- kidnapped_bigram %>%
+  count(bigram, sort = TRUE)
 
 #5. Plot the sentiment for the two books using the bing lexicon, 
 #using 100 words as the unit of length.
 
+bing_sentiments <- get_sentiments("bing")
+tidy_books = rbind(tidy_treasure_island_t %>% select(-linenumber) %>% 
+                     mutate(title = "Treasure_Island"),
+                   tidy_kidnapped_t %>% select(-linenumber) %>%
+                     mutate(title = "Kidnapped")) %>%
+  group_by(title) %>%
+  mutate(wordnumber = row_number()) %>%
+  ungroup()
+
+stevenson_sentiment <- tidy_books %>%
+  inner_join(bing_sentiments) %>%
+  mutate(index = wordnumber %/% 100) %>%
+  count(title, index, sentiment) %>%
+  pivot_wider(names_from = "sentiment", values_from = "n") %>%
+  mutate(sentiment = positive - negative)
+
+
+ggplot(data = stevenson_sentiment, 
+       mapping = aes(x = index, y = sentiment, fill = title)) + 
+  geom_bar(stat="identity") +
+  facet_wrap(~title, ncol = 2, scales = "free_x") +
+  theme(legend.position = "none")
 
 
 #PROBLEM 2: 
