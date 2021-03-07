@@ -9,22 +9,309 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+**Load the required libraries**
+```{r}
+library(tidyverse)
+library(tidytext)
+library(gutenbergr)
+library(textdata)
+library(topicmodels)
+library(broom)
 ```
 
-## Including Plots
+## PROBLEM 1:
 
-You can also embed plots, for example:
+1.Download the texts of Treasure Island and Kidnapped by Robert Louis Stevenson, 
+using the gutenberg package. You can find the numbers of the two books by
+searching the website https://www.gutenberg.org/ (Links to an external site.). 
+Type the name of the book in the quick search window and click “go”. 
+Then you should be able to find the web page for the book, and the 
+e-book number can be found in the bibliographic record section.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+**Use gutenbergr to download and store each novel as a tibble, noting the linenumbers**
+```{r}
+treasure_island_t <- gutenberg_download(c(120)) %>% as_tibble() %>%
+  mutate(linenumber = row_number())
+  
+kidnapped_t <- gutenberg_download(c(421)) %>% as_tibble() %>%
+  mutate(linenumber = row_number())
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+**For each novel tibble do the following:**
+**1. Call unnest_tokens() to break down each line in the novel into word tokens**
+**These will be stored separately on each line**
+**2. Perform an anti_join() between the unnested_token tibble and the list of stop words to remove the useless words that detract from the meaning of each novel**
+**3. Filter out the NA words**
+```{r}
+tidy_treasure_island_t <- treasure_island_t %>%
+  unnest_tokens(word, 
+                text, 
+                token = "words") %>%
+  anti_join(stop_words) %>%
+  filter(word != "NA")
+
+
+tidy_kidnapped_t <- kidnapped_t %>%
+  unnest_tokens(word, 
+                text, 
+                token = "words") %>%
+  anti_join(stop_words) %>%
+  filter(word != "NA")
+```
+
+2.Find the 10 most common words (that are not stop words) in each novel.
+
+**For each novel do the following:**
+**1. Call count() with the sort flag set to true to count the frequency of the words**
+**2. Call select(word) to only view the words**
+**2. Call head(10) to only display the first 10 results**
+```{r}
+top10_words_treasure_island <- tidy_treasure_island_t %>%
+  count(word, sort = TRUE) %>%
+  select(word) %>%
+  head(10)
+
+top10_words_treasure_island  
+
+top10_words_kidnapped <- tidy_kidnapped_t %>%
+  count(word, sort = TRUE) %>%
+  select(word) %>%
+  head(10)
+
+top10_words_kidnapped
+```
+
+3.
+(i) Create a visualization on the similarity/dissimilarity between the proportions
+of the non stop words (i.e., words that are not stop words) in the two books, 
+and calculate the correlation between them.
+
+**To create the frequency table perform the following steps:**
+**1. For each tidy-d tibble, create an additional column for the title**
+**2. Call bind_rows() to stack the tibbles on top of each other **
+**3. Create a new column using mutate() with the extracted words**
+**4. Call count() to tally the title,word combination**
+**5. Call group_by(title) to create the grouping as a precursor to calculating the**
+**word proportions**
+**6. Call select(-n) to remove the n column from the tibble**
+**7. Call pivot wider to generate a tibble with two columns for each of the novels containing only the proportion values**
+```{r}
+frequency_t <- bind_rows(mutate(tidy_treasure_island_t, title = "Treasure_Island"),
+                       mutate(tidy_kidnapped_t, title = "Kidnapped")) %>%
+  mutate(word = str_extract(word, "[a-z']+")) %>%
+  count(title, word) %>%
+  group_by(title) %>%
+  mutate(proportion = n / sum(n)) %>%
+  select(-n) %>%
+  pivot_wider(names_from = "title", values_from = "proportion")
+
+
+frequency_t
+```
+
+**Generate the ggplot for the similarity/dissimilarity on a data frame, but first remove the null values. Scale the results to reasonable values by performing a log transform on the proportions**
+```{r}
+ggplot(data = frequency_t %>% filter(!(Treasure_Island=="NA"|Kidnapped=="NA")), mapping = aes(x = Treasure_Island,
+                      y = Kidnapped)) +
+  geom_abline(color = "red", lty = 2,
+              lwd=2) +
+  geom_point(color="grey")+
+  geom_text(aes(label = word),
+            check_overlap = TRUE) +
+  scale_x_log10() +
+  scale_y_log10()  
+```
+
+**Calculate and display the correlation**
+```{r}
+corr <- frequency_t %>% filter(!(Treasure_Island=="NA"|Kidnapped=="NA")) %>% select(-word) %>% cor()
+corr
+```
+
+
+(ii) Find two words that appear 
+with a high frequency in Kidnapped but not in Treasure Island.
+**We achieve this result by removing NA's from Kidnapped but not from Treasure Island**
+**In such a way, we are able to find popular words in Kidnapped that are non-existent in Treasure Island**
+```{r}
+high_kidnapped_low_treasure_freq <- 
+  frequency_t %>%
+  filter(Kidnapped != "NA") %>%
+  arrange(desc(Kidnapped)) %>%
+  filter(is.na(Treasure_Island)) %>%
+  head(2) %>%
+  select(word)
+
+high_kidnapped_low_treasure_freq
+```
+
+(iii) Find two words that appear with a high frequency in Treasure Island 
+but not in Kidnapped.
+**We apply the same logic as in (ii)
+```{r}
+high_treasure_low_kidnapped_freq <- 
+  frequency_t %>%
+  filter(Treasure_Island != "NA") %>%
+  arrange(desc(Treasure_Island)) %>%
+  filter(is.na(Kidnapped)) %>%
+  head(2) %>%
+  select(word)
+
+high_treasure_low_kidnapped_freq
+```
+
+(iv) Find two words that appear with high frequency in both novels.
+
+**For each novel, perform the same steps as in (i) and (ii) without caring about the other column. Perform an inner join to find matching words   
+```{r}
+highest_freq_treasure_island <- 
+  frequency_t %>%
+  filter(Treasure_Island != "NA") %>%
+  arrange(desc(Treasure_Island)) %>%
+  select(word)
+
+highest_freq_kidnapped <- 
+  frequency_t %>%
+  filter(Kidnapped != "NA") %>%
+  arrange(desc(Kidnapped)) %>%
+  select(word)
+
+both_highest_freq <- 
+  inner_join(highest_freq_treasure_island, highest_freq_kidnapped) %>%
+  head(2)
+  
+both_highest_freq
+```
+
+4.Find the 10 most common bigrams in Treasure Island that do not include stop words.
+**1.Call unnest_tokens() like before, but instead of using token as "words", change the parameter to ngrams, specifying n=2 for a bigram**
+**2.Call filter() to remove the NA bigrams**
+**3.Call separate() to split the bigram column for each word as a separate column**
+**4.Remove the stop words from each column using filter()**
+**5.Call combine to regenerate the bigram as a single column**
+```{r}
+treasure_bigram <- treasure_island_t %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+  filter(bigram != "NA") %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  unite(bigram, word1, word2, sep=" ")
+
+top_10_treasure_bigrams <- treasure_bigram %>%
+  count(bigram, sort = TRUE)
+
+```
+
+5.Plot the sentiment for the two books using the bing lexicon, 
+using 100 words as the unit of length.
+**Call get_sentiments() specifying the bing lexicon**
+```{r}
+bing_sentiments <- get_sentiments("bing")
+```
+
+**Create tidy_books tibble by taking the tidy tibbles for each novel, using**
+**bind rows() to stack them into one tibble, and then generating the wordnumber**
+**Call ungroup() so that the data is restored to its ungrouped state**
+```{r}
+tidy_books = bind_rows(tidy_treasure_island_t %>% select(-linenumber) %>% 
+                     mutate(title = "Treasure_Island"),
+                   tidy_kidnapped_t %>% select(-linenumber) %>%
+                     mutate(title = "Kidnapped")) %>%
+  group_by(title) %>%
+  mutate(wordnumber = row_number()) %>%
+  ungroup()
+```
+
+**Generate the stevenson_sentiment tibble by applying the following steps:**
+**1.Perform an inner join between the books the books and the bing_sentiments**
+**2.Create a new column containing an index for every 100 words**
+**3.Count the combination of title, index, and sentiment**
+**4.Use pivot_wider() to aid in the creation of a tibble calculating the net sentiment, Here if the result is negative, we assume a negative sentiment, 0 for neutral and positive for positive sentiment**
+```{r}
+stevenson_sentiment <- tidy_books %>%
+  inner_join(bing_sentiments) %>%
+  mutate(index = wordnumber %/% 100) %>%
+  count(title, index, sentiment) %>%
+  pivot_wider(names_from = "sentiment", values_from = "n") %>%
+  mutate(sentiment = positive - negative)
+```
+**Generate the ggplot() using a facet_wrap to display the sentiment for both novels**
+```{r}
+ggplot(data = stevenson_sentiment, 
+       mapping = aes(x = index, y = sentiment, fill = title)) + 
+  geom_bar(stat="identity") +
+  facet_wrap(~title, ncol = 2, scales = "free_x") +
+  theme(legend.position = "none")
+```
+
+
+# PROBLEM 2: 
+For the AssociatedPress dataset provided by the topicmodels package, 
+create a three-topic LDA model using the “Gibbs” method instead of the default 
+VEM method. List the top 10 terms in each of the three topics in the 
+fitted model, and suggest what these topics might be.
+**Fix the data**
+```{r}
+data("AssociatedPress", package = "topicmodels")
+```
+
+
+**Train an LDA model with the Gibbs model and 3 topics. Specify the seed for reproducible results**
+```{r}
+ap_lda <- LDA(AssociatedPress, k = 3, method = "Gibbs", 
+              control = list(seed = 1234))
+```
+
+**Apply the tidy() function from broom to the results to extract the topics, terms and scores from the model**
+```{r}
+ap_topics <- broom::tidy(ap_lda, matrix = "beta")
+
+ap_topics
+```
+
+**For each topic, perform the following steps:**
+**1.Fitler ap_topics for the specific topic number(1,2 or 3)**
+**2.Create a column for beta_rank and compute it by order the beta in descending order and then using the window function min_rank()**
+**3.Filter for only bet ranks under 10**
+**4.Order the frame by the bet_rank)**
+**5.Create a column term that is a reorder based on the term,beta tuple**
+**6.Save only the first 10 rows using head(10)**
+**Finally, combine the 3 topics into one tibble using bind_rows()**
+
+```{r}
+topic1 <- ap_topics %>% filter(topic==1) %>%
+  mutate(beta_rank = min_rank(desc(beta))) %>%
+  filter(beta_rank <= 10) %>%
+  arrange(beta_rank) %>%
+  mutate(term = reorder(term, beta)) %>%
+  head(10)
+
+topic2 <- ap_topics %>% filter(topic==2) %>%
+  mutate(beta_rank = min_rank(desc(beta))) %>%
+  filter(beta_rank <= 10) %>%
+  arrange(beta_rank) %>%
+  mutate(term = reorder(term, beta)) %>%
+  head(10)
+
+topic3 <- ap_topics %>% filter(topic==3) %>%
+  mutate(beta_rank = min_rank(desc(beta))) %>%
+  filter(beta_rank <= 10) %>%
+  arrange(beta_rank) %>%
+  mutate(term = reorder(term, beta)) %>%
+  head(10)
+
+topics_t <- rbind(topic1, topic2, topic3) 
+```
+**Generate the ggplot**
+```{r}
+ggplot(data = topics_t, 
+       mapping = aes(x = beta, y = term, fill = topic)) + 
+  geom_bar(stat="identity") +
+  facet_wrap(~topic, ncol = 3) + 
+  theme(legend.position = "none")
+```
+**Discussion:**
+**I believe that topic 1 represents finance/stocks, topic 2 represents**
+**a criminal trial/sentencing, and topic 3 represents presidential elections**

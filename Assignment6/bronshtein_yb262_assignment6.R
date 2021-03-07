@@ -2,6 +2,8 @@ library(tidyverse)
 library(tidytext)
 library(gutenbergr)
 library(textdata)
+library(topicmodels)
+library(broom)
 #PROBLEM 1:
 
 #1.Download the texts of Treasure Island and Kidnapped by Robert Louis Stevenson, 
@@ -160,7 +162,6 @@ stevenson_sentiment <- tidy_books %>%
   pivot_wider(names_from = "sentiment", values_from = "n") %>%
   mutate(sentiment = positive - negative)
 
-
 ggplot(data = stevenson_sentiment, 
        mapping = aes(x = index, y = sentiment, fill = title)) + 
   geom_bar(stat="identity") +
@@ -168,8 +169,52 @@ ggplot(data = stevenson_sentiment,
   theme(legend.position = "none")
 
 
+
+
 #PROBLEM 2: 
 #For the AssociatedPress dataset provided by the topicmodels package, 
-#a three-topic LDA model using the “Gibbs” method instead of the default 
-#VEM method. List the top 10 terms in each of the four topics in the 
+#create a three-topic LDA model using the “Gibbs” method instead of the default 
+#VEM method. List the top 10 terms in each of the three topics in the 
 #fitted model, and suggest what these topics might be.
+
+data("AssociatedPress", package = "topicmodels")
+ap_lda <- LDA(AssociatedPress, k = 3, method = "Gibbs", 
+              control = list(seed = 1234))
+
+ap_topics <- broom::tidy(ap_lda, matrix = "beta")
+
+topic1 <- ap_topics %>% filter(topic==1) %>%
+  mutate(beta_rank = min_rank(desc(beta))) %>%
+  filter(beta_rank <= 10) %>%
+  arrange(beta_rank) %>%
+  mutate(term = reorder(term, beta)) %>%
+  head(10)
+
+topic2 <- ap_topics %>% filter(topic==2) %>%
+  mutate(beta_rank = min_rank(desc(beta))) %>%
+  filter(beta_rank <= 10) %>%
+  arrange(beta_rank) %>%
+  mutate(term = reorder(term, beta)) %>%
+  head(10)
+
+topic3 <- ap_topics %>% filter(topic==3) %>%
+  mutate(beta_rank = min_rank(desc(beta))) %>%
+  filter(beta_rank <= 10) %>%
+  arrange(beta_rank) %>%
+  mutate(term = reorder(term, beta)) %>%
+  head(10)
+
+topics_t <- rbind(topic1, topic2, topic3)
+
+ggplot(data = topics_t, mapping = aes(x = beta, y = term)) +
+  geom_col(show.legend = TRUE)
+
+
+ggplot(data = topics_t, 
+       mapping = aes(x = beta, y = term, fill = topic)) + 
+  geom_bar(stat="identity") +
+  facet_wrap(~topic, ncol = 3) + 
+  theme(legend.position = "none")
+
+
+
