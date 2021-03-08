@@ -215,9 +215,9 @@ bing_sentiments <- get_sentiments("bing")
 **bind rows() to stack them into one tibble, and then generating the wordnumber**
 **Call ungroup() so that the data is restored to its ungrouped state**
 ```{r}
-tidy_books = bind_rows(tidy_treasure_island_t %>% select(-linenumber) %>% 
+tidy_books = bind_rows(treasure_island_t %>% select(-linenumber) %>% 
                      mutate(title = "Treasure_Island"),
-                   tidy_kidnapped_t %>% select(-linenumber) %>%
+                   kidnapped_t %>% select(-linenumber) %>%
                      mutate(title = "Kidnapped")) %>%
   group_by(title) %>%
   mutate(wordnumber = row_number()) %>%
