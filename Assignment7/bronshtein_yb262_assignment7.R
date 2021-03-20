@@ -1,6 +1,7 @@
 library(tidyverse)
 library(rvest)
 library(broom)
+library(Hmisc)
 #PROBLEM 1:
 #  1.From the worldometer webpage 
 # https://www.worldometers.info/coronavirus/usa/new-jersey/extract 
@@ -19,25 +20,37 @@ worldometer_t <- url %>%
 
 #Get yesterday's data, extract case information, and remove statewide totals rows
 
-funs_list = list(str_replace_all)
 county_covid_t <- worldometer_t[[2]] %>% 
   as_tibble() %>%
   select(County, TotalCases, NewCases, TotalDeaths, NewDeaths) %>%
-  filter(!str_detect(County ,"Total")) %>%
-  mutate_all(
-    
-    
-    
-    
-    ggplot(data = county_covid_t) +
-      geom_bar(mapping = aes(x = County, fill = c(TotalCases, NewCases, ) ))
-    
-    total_deaths_t <- county_covid_t %>%
-      select(TotalCases)
-    pull(TotalCases) #%>% 
-    #str_replace_all("[,+]", "")  
-    diamonds_t <- diamonds %>% as_tibble()
-    
-    list(mean = mean, median = median, mode = mode)
-    $mean
-    
+  filter(!str_detect(County ,"Total"))
+
+
+clean_column <- function(data, col_name) {
+  col_vec <- as_tibble(data) %>% 
+    select(col_name) %>%
+    pull(col_name)
+  if (!all.is.numeric(col_vec)) {
+    return(
+      col_vec %>%
+        str_replace_all("[,+]", "") %>%
+        as.numeric() %>%
+        replace_na(0)
+    )
+  } else {
+    return(
+      col_vec %>%
+        replace_na(0)
+    )
+  }
+}
+
+total_cases <- clean_column(data = county_covid_t, col_name = "TotalCases")
+new_cases <- clean_column(data = county_covid_t, col_name = "NewCases")
+total_deaths <- clean_column(data = county_covid_t, col_name = "TotalDeaths")
+new_deaths <- clean_column(data = county_covid_t, col_name = "NewDeaths")
+
+
+
+
+
