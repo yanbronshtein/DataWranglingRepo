@@ -2,7 +2,7 @@
 title: "Assignment 7 Data Wrangling"
 author: "Yaniv Bronshtein"
 date: "3/17/2021"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}

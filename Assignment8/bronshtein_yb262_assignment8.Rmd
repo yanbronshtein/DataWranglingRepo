@@ -1,10 +1,8 @@
 ---
-title: "First Markdown Example"
-author: "Tirthankar Dasgupta"
-date: "1/25/2021"
-output:
-  html_document: default
-  pdf_document: default
+title: "Data Wrangling Assignment 8"
+author: "Yaniv Bronshtein"
+date: "3/26/2021"
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}

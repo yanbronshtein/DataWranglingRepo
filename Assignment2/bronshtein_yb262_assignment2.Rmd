@@ -2,7 +2,7 @@
 title: "Assignment 2 Data Wrangling"
 author: "Yaniv Bronshtein"
 date: "02/07/2021"
-output: html_document
+output: pdf_document
 ---
   
   ```{r setup, include=FALSE}
@@ -14,11 +14,12 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(gapminder)
 ```
-# 1. Download the dataset on restaurant inspection in csv format from
-# https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/43nn-# pn8j (Links to an external site.)
-# and convert it to a data frame.
+**1. Download the dataset on restaurant inspection in csv format from**
+**https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/3nnpn8j (Links to an external site.)**
+**and convert it to a data frame.**
 **read data from csv remove leading and trailing White space**
 ```{r}
+
 res_inspec_results <- read_csv(
   "DOHMH_New_York_City_Restaurant_Inspection_Results.csv",
   trim_ws = TRUE)
@@ -30,10 +31,10 @@ df <- as.data.frame(res_inspec_results)
 ```
 
 
-## (1a) Form a new data frame restricted to restaurants in Queens with cuisine 
-## to "Pizza". [Hint: Use str_detect() in the library stringr. 
-## Examples of usage of str_detect() can be found here: 
-## https://stringr.tidyverse.org/reference/str_detect.html]
+**(1a) Form a new data frame restricted to restaurants in Queens with cuisine** 
+**to "Pizza". [Hint: Use str_detect() in the library stringr.** 
+**Examples of usage of str_detect() can be found here:** 
+**https://stringr.tidyverse.org/reference/str_detect.html]**
 
   
 **Filter df by specifying the BORO field as Queens and using str_detect()**
@@ -47,10 +48,10 @@ queens_pizza <- filter(df, BORO == "Queens",
 ```
 
 
-## 1b). What are the 5 most commonly names inspected restaurants 
-## (use the variable "DBA") in the data frame? (queens_pizza)
+**1b). What are the 5 most commonly names inspected restaurants** 
+**(use the variable "DBA") in the data frame? (queens_pizza)**
 
-** Perform the following steps**
+**Perform the following steps**
 **1. Group the queens_pizza data frame by the DBA field**
 **2. Pipe the result of step 1 to summarize which will return a new data frame** 
 **with just the frequency and the DBA field**
@@ -81,8 +82,8 @@ ggplot(data = common_names,
 *Based on the data in the graph, the 5 most inspected restaurants are DOMINOS'*
 *PAPA JOHN'S, Rosa's Pizza, PIZZA HUT, AND 3 BROS 99 CENT PIZZA* 
 
-##1c). On what dates has queens pizza parlor "SUSANO'S PIZZERIA & RESTAURANT"
-## been inspected?
+**1c). On what dates has queens pizza parlor "SUSANO'S PIZZERIA & RESTAURANT"**
+**been inspected?**
 **Filter queens_pizza to match the exact restaurant name. NOTE:**
 **we cannot use str_detect() because that would mean including restaurants**
 **such as SUSANO'S PIZZERIA & RESTAURANT I**
@@ -98,11 +99,12 @@ dates_inspected <- distinct(queens_pizza_susanos["INSPECTION DATE"])
 dates_inspected
 ```
 
-# 2. The file "gapminder_2007_gini.tsv" is in the “Assignments” folder under the files menu of # the course website; it is a subset of the 2007 Gapminder data merged with recent Gini
-# coefficient data (https://en.wikipedia.org/wiki/Gini_coefficient
+**2. The file "gapminder_2007_gini.tsv" is in the “Assignments” folder under the files** **menu of the course website; it is a subset of the 2007 Gapminder data merged with recent**
+**coefficient data (https://en.wikipedia.org/wiki/Gini_coefficient**
 
-## 2a). Create a plot to compare the distributions (e.g., central tendency, dispersion) of the ## Gini coefficient in different continents. [Hint: Use using geom_boxplot(). Details and 
-## examples are available here: https://ggplot2.tidyverse.org/reference/geom_boxplot.html]
+**2a). Create a plot to compare the distributions (e.g., central tendency, dispersion) of **
+**the Gini coefficient in different continents. Hint: Use using geom_boxplot(). Details** 
+**and examples are available here: https://ggplot2.tidyverse.org/reference/geom_boxplot.html]**
 
 
 **Read in the data from the tab separated vector file, trimming white space**
@@ -124,9 +126,10 @@ ggplot(data = gap_df, mapping = aes(x = continent, y = gini)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-## 2b) Does the Gini coefficient appear to have any impact on the life 
-## expectancy in 2007? Explain your answer using a plot, 
-## classified by continents
+**2b) Does the Gini coefficient appear to have any impact on the life** 
+**expectancy in 2007? Explain your answer using a plot,** 
+**classified by continents**
+
 **1. Filter the gap_df data frame by the year 2007**
 **2. Pipe the result of step 1 to group_by() to aggregate the data by continent** 
 **3. Pipe the result of step 2 to the summarise() function which returns**
@@ -155,14 +158,14 @@ ggplot(data = gini_vs_life_exp, mapping = aes(x = gini, y = lifeExp, color = con
 *Europe and Oceania have much higher life expectancy than Africa which falls*
 *below the linear regression line*
 
-# (3) Using the original gapminder data frame, please generate a data frame 
-# with a new variable called gdp by multiplying the population size by the gdp 
-# per capita. To make those large numbers more understandable, please form an 
-# new variable called gdp_ratio equal to the gdp divided by the gdp of the 
-# United States in 2007.
-# Find the mean gdp_ratio by continent and year, and then plot the mean 
-# gdp_ratio over time, distinguishing the continents. 
-# Please use both points and lines for the plot
+**(3) Using the original gapminder data frame, please generate a data frame** 
+**with a new variable called gdp by multiplying the population size by the gdp** 
+**per capita. To make those large numbers more understandable, please form an** 
+**new variable called gdp_ratio equal to the gdp divided by the gdp of the** 
+**United States in 2007**.
+**Find the mean gdp_ratio by continent and year, and then plot the mean** 
+**gdp_ratio over time, distinguishing the continents.** 
+**Please use both points and lines for the plot**
 
 **Create a data frame to store the imported data from the R package gapminder**
 ```{r}

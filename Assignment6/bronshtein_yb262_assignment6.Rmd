@@ -2,7 +2,7 @@
 title: "Assignment 6"
 author: "Yaniv Bronshtein"
 date: "3/5/2021"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -202,6 +202,7 @@ treasure_bigram <- treasure_island_t %>%
 top_10_treasure_bigrams <- treasure_bigram %>%
   count(bigram, sort = TRUE)
 
+top_10_treasure_bigrams
 ```
 
 5.Plot the sentiment for the two books using the bing lexicon, 
@@ -215,9 +216,9 @@ bing_sentiments <- get_sentiments("bing")
 **bind rows() to stack them into one tibble, and then generating the wordnumber**
 **Call ungroup() so that the data is restored to its ungrouped state**
 ```{r}
-tidy_books = bind_rows(treasure_island_t %>% select(-linenumber) %>% 
+tidy_books <- bind_rows(tidy_treasure_island_t %>% select(-linenumber) %>% 
                      mutate(title = "Treasure_Island"),
-                   kidnapped_t %>% select(-linenumber) %>%
+                   tidy_kidnapped_t %>% select(-linenumber) %>%
                      mutate(title = "Kidnapped")) %>%
   group_by(title) %>%
   mutate(wordnumber = row_number()) %>%
