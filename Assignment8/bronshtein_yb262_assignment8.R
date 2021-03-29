@@ -3,10 +3,10 @@ library(tidyverse)
 library(gridExtra)
 library(ggbeeswarm)
 #PROBLEM 1:
-  
+
 #  For the gapminder data, perform the following operations, using the 
 #tidyr::nest() function and data frames with list-columns:
-  
+
 #  1.Fit a separate linear model of log10(gdpPercap) on year for each country.
 #2.Plot residuals against time, showing separate lines for each country in the 
 #same plot. Also, do this separately for each continent.
