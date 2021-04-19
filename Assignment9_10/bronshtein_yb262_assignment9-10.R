@@ -74,4 +74,5 @@ density <- network.density(network_obj)
 density
 
 mean_degree <- mean(degree(net_2))
-mean_degree  
+mean_degree
+
